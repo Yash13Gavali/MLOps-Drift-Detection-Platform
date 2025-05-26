@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlops-drift-platform"
+version = "1.0.0"
+description = "Reproducible training, inference, and distribution monitoring"
+requires-python = ">=3.11,<3.13"
+dependencies = ["fastapi==0.116.1", "uvicorn==0.35.0", "numpy==2.2.6", "scipy==1.15.3", "scikit-learn==1.6.1", "httpx==0.28.1", "pydantic==2.11.7"]
+
+[project.scripts]
+drift-platform = "drift_platform.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+

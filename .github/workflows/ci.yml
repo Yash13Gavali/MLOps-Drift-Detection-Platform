@@ -1,0 +1,56 @@
+name: Validate and release
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the shared training and serving image
+        run: docker build -t platform:${{ github.sha }} .
+      - name: Run tests in the release image
+        run: docker run --rm --entrypoint python platform:${{ github.sha }} -m pytest -q
+      - name: Train and validate time to inference
+        shell: bash
+        run: |
+          set -euo pipefail
+          START=$SECONDS
+          KEY=$(openssl rand -hex 24)
+          echo "::add-mask::$KEY"
+          docker volume create validation-data
+          docker run --rm -v validation-data:/data platform:${{ github.sha }} train --root /data
+          docker run -d --name platform-api -e API_KEY="$KEY" -v validation-data:/data platform:${{ github.sha }}
+          ready=false
+          for attempt in $(seq 1 30); do
+            if docker exec -e API_KEY="$KEY" platform-api drift-platform smoke; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = true
+          ELAPSED=$((SECONDS - START))
+          echo "Training-to-validated-inference: ${ELAPSED} seconds" >> "$GITHUB_STEP_SUMMARY"
+          test "$ELAPSED" -le 300
+      - name: Export validated image
+        run: docker save platform:${{ github.sha }} | gzip > platform-image.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validated-container
+          path: platform-image.tar.gz
+          retention-days: 7
+      - name: Cleanup
+        if: always()
+        run: |
+          docker logs platform-api || true
+          docker rm -f platform-api || true
+          docker volume rm validation-data || true
+

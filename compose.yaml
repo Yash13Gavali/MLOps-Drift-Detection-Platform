@@ -1,0 +1,36 @@
+services:
+  train:
+    image: ${PLATFORM_IMAGE:-drift-platform:local}
+    build: .
+    command: ["train", "--root", "/data"]
+    volumes:
+      - platform-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  api:
+    image: ${PLATFORM_IMAGE:-drift-platform:local}
+    command: ["serve"]
+    depends_on:
+      train:
+        condition: service_completed_successfully
+    environment:
+      API_KEY: ${API_KEY:?Set a secret with at least 24 characters}
+      ALERT_WEBHOOK: ${ALERT_WEBHOOK:-}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - platform-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 2
+volumes:
+  platform-data:
+
