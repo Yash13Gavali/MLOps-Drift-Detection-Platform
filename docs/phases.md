@@ -32,3 +32,4 @@
 | 28 | CI automation | Container build followed by tests in that image |
 | 29 | Release validation | Authenticated smoke inference within measured budget |
 | 30 | Operations | Deployment, rollback, alert triage, and backup procedures |
+Phase 2 verification update
