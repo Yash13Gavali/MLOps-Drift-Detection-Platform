@@ -34,3 +34,4 @@
 | 30 | Operations | Deployment, rollback, alert triage, and backup procedures |
 Phase 2 verification update
 Phase 3 verification update
+Phase 4 verification update
